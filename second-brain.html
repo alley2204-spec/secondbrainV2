@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e0e11">
+<meta name="description" content="你的個人 Second Brain — PARA 筆記系統">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Second Brain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Newsreader:ital,wght@0,300;0,400;1,300;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0e0e11;
+  --bg2:      #16161c;
+  --bg3:      #1e1e28;
+  --border:   rgba(255,255,255,0.07);
+  --text:     #e8e6f0;
+  --muted:    rgba(232,230,240,0.45);
+  --accent:   #7c6cfc;
+  --accent2:  #a594fd;
+  --gold:     #f0c060;
+  --sea:      #4ab8d0;
+  --green:    #52c97a;
+  --red:      #f06070;
+  --amber:    #f0a040;
+
+  /* PARA colors */
+  --p-proj:   #7c6cfc;
+  --p-area:   #4ab8d0;
+  --p-res:    #52c97a;
+  --p-arch:   rgba(255,255,255,0.3);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Newsreader', serif;
+  overflow: hidden;
+}
+
+/* ── BACKGROUND NOISE ── */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 10%, rgba(124,108,252,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 90%, rgba(74,184,208,0.07) 0%, transparent 60%),
+    var(--bg);
+  z-index:-1;
+}
+
+/* ════════════════════════════════
+   LAYOUT
+════════════════════════════════ */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* ── HEADER ── */
+.header {
+  padding: 1rem 1.2rem 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.header-left h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.header-left h1 span { color: var(--accent2); }
+.header-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 0.1rem;
+}
+.search-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 38px; height: 38px;
+  display: flex; align-items:center; justify-content:center;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+.search-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+/* ── SEARCH BAR ── */
+.search-bar {
+  display: none;
+  padding: 0.6rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.search-bar.show { display: block; }
+.search-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'Newsreader', serif;
+  font-size: 0.95rem;
+  padding: 0.55rem 0.9rem;
+  outline: none;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--muted); }
+
+/* ── PARA TABS ── */
+.para-tabs {
+  display: flex;
+  padding: 0.7rem 1.2rem 0;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.para-tabs::-webkit-scrollbar { display: none; }
+.ptab {
+  flex-shrink: 0;
+  padding: 0.35rem 0.9rem;
+  border-radius: 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: var(--bg3);
+  color: var(--muted);
+  transition: all 0.2s;
+}
+.ptab.active, .ptab:hover {
+  color: var(--text);
+}
+.ptab[data-cat="all"].active   { background: rgba(124,108,252,0.15); border-color: rgba(124,108,252,0.35); color: var(--accent2); }
+.ptab[data-cat="project"].active { background: rgba(124,108,252,0.12); border-color: rgba(124,108,252,0.3); color: var(--p-proj); }
+.ptab[data-cat="area"].active   { background: rgba(74,184,208,0.12); border-color: rgba(74,184,208,0.3); color: var(--p-area); }
+.ptab[data-cat="resource"].active { background: rgba(82,201,122,0.12); border-color: rgba(82,201,122,0.3); color: var(--p-res); }
+.ptab[data-cat="archive"].active  { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.15); color: var(--text); }
+
+/* ── NOTE LIST ── */
+.note-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.8rem 1.2rem 7rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.08) transparent;
+}
+
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 1rem 0 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.note-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+  transition: all 0.18s;
+  position: relative;
+  overflow: hidden;
+  animation: cardIn 0.25s ease both;
+}
+@keyframes cardIn {
+  from { opacity:0; transform: translateY(8px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+.note-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+}
+.note-card[data-cat="project"]::before { background: var(--p-proj); }
+.note-card[data-cat="area"]::before    { background: var(--p-area); }
+.note-card[data-cat="resource"]::before { background: var(--p-res); }
+.note-card[data-cat="archive"]::before { background: rgba(255,255,255,0.2); }
+
+.note-card:hover, .note-card:active {
+  background: var(--bg3);
+  border-color: rgba(255,255,255,0.12);
+  transform: translateY(-1px);
+}
+
+.note-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+.note-cat-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.45rem;
+  border-radius: 20px;
+}
+.note-cat-badge.project  { background: rgba(124,108,252,0.2); color: var(--p-proj); }
+.note-cat-badge.area     { background: rgba(74,184,208,0.2);  color: var(--p-area); }
+.note-cat-badge.resource { background: rgba(82,201,122,0.2);  color: var(--p-res); }
+.note-cat-badge.archive  { background: rgba(255,255,255,0.08); color: var(--muted); }
+
+.note-tags {
+  display: flex; gap: 0.3rem; flex-wrap: wrap;
+}
+.note-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.52rem;
+  color: var(--gold);
+  opacity: 0.7;
+}
+
+.note-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+  line-height: 1.3;
+}
+.note-preview {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.note-date {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--muted);
+  margin-top: 0.45rem;
+  opacity: 0.6;
+}
+.voice-icon { font-size: 0.7rem; margin-right: 0.2rem; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--muted);
+}
+.empty-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
+.empty-msg  { font-size: 0.88rem; line-height: 1.6; }
+
+/* ── FAB (Voice Record Button) ── */
+.fab-wrap {
+  position: fixed;
+  bottom: 1.8rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  z-index: 50;
+}
+.fab-row { display: flex; gap: 0.8rem; align-items: center; }
+
+.fab {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+  display: flex; align-items:center; justify-content:center;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 24px rgba(124,108,252,0.45);
+  transition: all 0.2s;
+  position: relative;
+  color: #fff;
+}
+.fab:hover { transform: scale(1.06); box-shadow: 0 6px 30px rgba(124,108,252,0.6); }
+.fab.recording {
+  background: var(--red);
+  animation: pulse 1s infinite;
+  box-shadow: 0 4px 24px rgba(240,96,112,0.5);
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(240,96,112,0.5); }
+  50%      { box-shadow: 0 0 0 14px rgba(240,96,112,0); }
+}
+
+.fab-mini {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex; align-items:center; justify-content:center;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+  color: var(--muted);
+}
+.fab-mini:hover { border-color: var(--accent); color: var(--accent2); background: rgba(124,108,252,0.1); }
+
+.fab-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.recording-timer {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--red);
+  display: none;
+}
+.recording-timer.show { display: block; }
+
+/* ══════════════════════════
+   BOTTOM SHEET (Note Editor)
+══════════════════════════ */
+.sheet-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 80;
+  backdrop-filter: blur(4px);
+}
+.sheet-overlay.show { display: block; }
+
+.bottom-sheet {
+  position: fixed;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg2);
+  border-radius: 20px 20px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  z-index: 90;
+  transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+  max-height: 92dvh;
+  display: flex;
+  flex-direction: column;
+}
+.bottom-sheet.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+.sheet-handle {
+  width: 36px; height: 4px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+  margin: 0.8rem auto 0;
+  flex-shrink: 0;
+}
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1.2rem 0.6rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.sheet-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.sheet-actions { display: flex; gap: 0.5rem; }
+.sheet-btn {
+  padding: 0.35rem 0.9rem;
+  border-radius: 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--muted);
+  transition: all 0.2s;
+}
+.sheet-btn.save {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 500;
+}
+.sheet-btn.delete { color: var(--red); border-color: rgba(240,96,112,0.3); }
+.sheet-btn:hover { filter: brightness(1.2); }
+
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.2rem 1.5rem;
+}
+
+/* Transcript preview in sheet */
+.transcript-preview {
+  background: rgba(124,108,252,0.08);
+  border: 1px solid rgba(124,108,252,0.2);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.82rem;
+  color: var(--accent2);
+  line-height: 1.5;
+  display: none;
+}
+.transcript-preview.show { display: block; }
+.transcript-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  opacity: 0.7;
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+}
+
+.form-row { margin-bottom: 0.9rem; }
+.form-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+  display: block;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'Newsreader', serif;
+  font-size: 0.95rem;
+  padding: 0.6rem 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--accent);
+}
+.form-select option { background: var(--bg2); }
+.form-textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
+
+/* PARA selector */
+.para-selector {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 0.4rem;
+}
+.para-opt {
+  padding: 0.5rem 0.3rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.para-opt .po-icon { font-size: 1.1rem; margin-bottom: 0.2rem; }
+.para-opt .po-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.para-opt.selected[data-val="project"] { background:rgba(124,108,252,0.15); border-color:rgba(124,108,252,0.4); }
+.para-opt.selected[data-val="area"]    { background:rgba(74,184,208,0.12);  border-color:rgba(74,184,208,0.35); }
+.para-opt.selected[data-val="resource"]{ background:rgba(82,201,122,0.12);  border-color:rgba(82,201,122,0.35); }
+.para-opt.selected[data-val="archive"] { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.2); }
+.para-opt.selected .po-label { color: var(--text); }
+
+/* Tags input */
+.tags-wrap {
+  display: flex; flex-wrap: wrap; gap: 0.3rem;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  min-height: 42px;
+  align-items: center;
+  cursor: text;
+}
+.tags-wrap:focus-within { border-color: var(--accent); }
+.tag-chip {
+  background: rgba(240,192,96,0.15);
+  border: 1px solid rgba(240,192,96,0.3);
+  border-radius: 20px;
+  padding: 0.12rem 0.5rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--gold);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 0.2rem;
+}
+.tag-chip .remove { opacity: 0.6; font-size: 0.75rem; }
+.tags-input {
+  background: none; border: none; outline: none;
+  color: var(--text); font-family: 'DM Mono', monospace;
+  font-size: 0.72rem; flex: 1; min-width: 80px;
+  padding: 0.1rem 0.2rem;
+}
+.tags-input::placeholder { color: var(--muted); opacity: 0.5; }
+
+/* ── SAVE INDICATOR ── */
+#saveToast {
+  position: fixed; top: 1rem; right: 1rem;
+  background: rgba(82,201,122,0.9);
+  color: #fff;
+  font-family: 'DM Mono', monospace; font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  padding: 0.4rem 0.9rem; border-radius: 20px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s; z-index: 200;
+}
+
+/* ── STATS BAR ── */
+.stats-bar {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 1.2rem 0.4rem;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.stats-bar::-webkit-scrollbar { display: none; }
+.stat-pill {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 0.3rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.stat-num {
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* ── BACKUP BAR ── */
+.backup-bar {
+  position: fixed; bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  padding: 0 1.2rem 0.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  z-index: 40;
+  pointer-events: none;
+}
+.backup-bar button {
+  pointer-events: all;
+  padding: 0.28rem 0.7rem;
+  border-radius: 20px;
+  font-family: 'DM Mono', monospace; font-size: 0.55rem;
+  letter-spacing: 0.06em; cursor: pointer;
+  border: 1px solid var(--border);
+  background: rgba(14,14,17,0.8);
+  backdrop-filter: blur(8px);
+  color: var(--muted);
+  transition: all 0.2s;
+}
+.backup-bar button:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+/* ── VOICE STATUS ── */
+.voice-status {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  background: var(--bg2);
+  border: 1px solid rgba(240,96,112,0.4);
+  border-radius: 20px;
+  padding: 1.5rem 2rem;
+  text-align: center;
+  z-index: 60;
+  display: none;
+  min-width: 220px;
+}
+.voice-status.show { display: block; }
+.vs-wave {
+  display: flex; justify-content: center; gap: 4px;
+  margin-bottom: 0.8rem;
+}
+.vs-bar {
+  width: 4px; border-radius: 2px;
+  background: var(--red);
+  animation: wave 0.8s ease-in-out infinite;
+}
+.vs-bar:nth-child(1){height:16px;animation-delay:0s}
+.vs-bar:nth-child(2){height:24px;animation-delay:0.1s}
+.vs-bar:nth-child(3){height:32px;animation-delay:0.2s}
+.vs-bar:nth-child(4){height:24px;animation-delay:0.3s}
+.vs-bar:nth-child(5){height:16px;animation-delay:0.4s}
+@keyframes wave {
+  0%,100%{transform:scaleY(0.4)} 50%{transform:scaleY(1)}
+}
+.vs-text {
+  font-family: 'DM Mono', monospace; font-size: 0.7rem;
+  letter-spacing: 0.1em; color: var(--red); text-transform: uppercase;
+  margin-bottom: 0.3rem;
+}
+.vs-timer {
+  font-family: 'DM Mono', monospace; font-size: 1.2rem;
+  color: var(--text); margin-bottom: 0.8rem;
+}
+.vs-stop {
+  background: var(--red); border: none; border-radius: 20px;
+  color: #fff; font-family: 'DM Mono', monospace; font-size: 0.65rem;
+  letter-spacing: 0.08em; padding: 0.45rem 1.2rem;
+  cursor: pointer; transition: all 0.2s;
+}
+.vs-stop:hover { filter: brightness(1.2); }
+
+/* ── PROCESSING OVERLAY ── */
+.processing {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 95;
+  display: none;
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 1rem;
+}
+.processing.show { display: flex; }
+.proc-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid rgba(124,108,252,0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.proc-text {
+  font-family: 'DM Mono', monospace; font-size: 0.7rem;
+  letter-spacing: 0.1em; color: var(--accent2); text-transform: uppercase;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+.reminder-day-btn{padding:.28rem .65rem;border-radius:20px;font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.06em;border:1px solid var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;transition:all .18s}
+.reminder-day-btn.active{background:rgba(124,108,252,.15);border-color:rgba(124,108,252,.35);color:var(--accent2)}
+.due-badge{display:inline-flex;align-items:center;gap:.2rem;font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.05em;padding:.1rem .42rem;border-radius:20px;margin-top:.3rem}
+.due-badge.urgent{background:rgba(240,96,112,.18);color:var(--red);border:1px solid rgba(240,96,112,.3)}
+.due-badge.soon{background:rgba(240,160,64,.18);color:var(--amber);border:1px solid rgba(240,160,64,.3)}
+.due-badge.ok{background:rgba(82,201,122,.12);color:var(--green);border:1px solid rgba(82,201,122,.25)}
+.notif-panel{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-bottom:1px solid var(--border);z-index:70;padding:.8rem 1.2rem;display:none;animation:slideDown .3s ease both}
+.notif-panel.show{display:block}
+@keyframes slideDown{from{transform:translateX(-50%) translateY(-100%)}to{transform:translateX(-50%) translateY(0)}}
+.notif-title{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin-bottom:.5rem}
+.notif-close{float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem}
+.notif-item{display:flex;align-items:center;gap:.6rem;padding:.4rem 0;border-bottom:1px solid var(--border);cursor:pointer}
+.notif-item:last-child{border-bottom:none}
+.notif-item-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.notif-item-text{flex:1;font-size:.82rem;color:var(--text)}
+.notif-item-days{font-family:'DM Mono',monospace;font-size:.58rem}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Second <span>Brain</span></h1>
+      <div class="header-sub" id="headerSub">⚓ 帆船 · AI · 內容創作</div>
+    </div>
+    <div style="display:flex;gap:.5rem;align-items:center"><button class="search-btn" id="notifBell" onclick="toggleNotifPanel()">🔕</button><button class="search-btn" onclick="toggleSearch()">🔍</button></div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-bar" id="searchBar">
+    <input class="search-input" id="searchInput" placeholder="搜尋筆記、標籤..." oninput="renderNotes()">
+  </div>
+
+  <!-- PARA TABS -->
+  <div class="para-tabs">
+    <button class="ptab active" data-cat="all"      onclick="filterCat('all')">全部</button>
+    <button class="ptab"        data-cat="project"   onclick="filterCat('project')">🚀 Projects</button>
+    <button class="ptab"        data-cat="area"      onclick="filterCat('area')">⚓ Areas</button>
+    <button class="ptab"        data-cat="resource"  onclick="filterCat('resource')">📚 Resources</button>
+    <button class="ptab"        data-cat="archive"   onclick="filterCat('archive')">🗄 Archive</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- NOTE LIST -->
+  <div class="note-list" id="noteList"></div>
+
+  <!-- FAB -->
+  <div class="fab-wrap">
+    <div class="fab-row">
+      <button class="fab-mini" onclick="openEditor(null)" title="新增文字筆記">✏️</button>
+      <button class="fab" id="recordBtn" onclick="toggleRecord()" title="語音錄音">🎙</button>
+      <button class="fab-mini" onclick="exportBackup()" title="備份">⬇</button>
+    </div>
+    <div class="fab-label" id="fabLabel">按住錄音</div>
+    <div class="recording-timer" id="recTimer">00:00</div>
+  </div>
+
+</div>
+
+<!-- VOICE STATUS OVERLAY -->
+<div class="voice-status" id="voiceStatus">
+  <div class="vs-wave">
+    <div class="vs-bar"></div><div class="vs-bar"></div><div class="vs-bar"></div>
+    <div class="vs-bar"></div><div class="vs-bar"></div>
+  </div>
+  <div class="vs-text">🎙 錄音中</div>
+  <div class="vs-timer" id="vsTimer">00:00</div>
+  <button class="vs-stop" onclick="stopRecord()">停止錄音</button>
+</div>
+
+<!-- PROCESSING -->
+<div class="processing" id="processingOverlay">
+  <div class="proc-spinner"></div>
+  <div class="proc-text" id="procText">轉換語音中...</div>
+</div>
+
+<!-- SHEET OVERLAY -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
+
+<!-- BOTTOM SHEET (Editor) -->
+<div class="bottom-sheet" id="bottomSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title" id="sheetTitle">新增筆記</div>
+    <div class="sheet-actions">
+      <button class="sheet-btn delete" id="deleteBtn" onclick="deleteNote()" style="display:none">刪除</button>
+      <button class="sheet-btn" id="aiClassifyBtn" onclick="manualClassify()" style="display:none;background:rgba(124,108,252,0.15);border-color:rgba(124,108,252,0.35);color:var(--accent2)">✦ AI</button>
+      <button class="sheet-btn" onclick="closeSheet()">取消</button>
+      <button class="sheet-btn save" onclick="saveNote()">儲存</button>
+    </div>
+  </div>
+  <div class="sheet-body">
+
+    <!-- Voice transcript preview -->
+    <div class="transcript-preview" id="transcriptPreview">
+      <div class="transcript-label">🎙 語音轉文字</div>
+      <div id="transcriptText"></div>
+    </div>
+
+    <!-- Title -->
+    <div class="form-row">
+      <label class="form-label">標題</label>
+      <input class="form-input" id="noteTitle" placeholder="這個想法叫什麼...">
+    </div>
+
+    <!-- PARA Category -->
+    <div class="form-row">
+      <label class="form-label">分類 (PARA)</label>
+      <div class="para-selector">
+        <div class="para-opt selected" data-val="project" onclick="selectCat('project')">
+          <div class="po-icon">🚀</div>
+          <div class="po-label">Project</div>
+        </div>
+        <div class="para-opt" data-val="area" onclick="selectCat('area')">
+          <div class="po-icon">⚓</div>
+          <div class="po-label">Area</div>
+        </div>
+        <div class="para-opt" data-val="resource" onclick="selectCat('resource')">
+          <div class="po-icon">📚</div>
+          <div class="po-label">Resource</div>
+        </div>
+        <div class="para-opt" data-val="archive" onclick="selectCat('archive')">
+          <div class="po-icon">🗄</div>
+          <div class="po-label">Archive</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="form-row">
+      <label class="form-label">內容</label>
+      <textarea class="form-textarea" id="noteContent" placeholder="記下你的想法、觀察、學到的東西..."></textarea>
+    </div>
+
+    <!-- Due Date (Projects only) -->
+    <div class="form-row" id="dueDateRow" style="display:none">
+      <label class="form-label">⏰ 到期日</label>
+      <input class="form-input" type="date" id="noteDueDate">
+      <div style="margin-top:.55rem">
+        <label class="form-label" style="margin-bottom:.3rem">提前幾天通知</label>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          <button class="reminder-day-btn active" data-days="1" onclick="toggleReminderDay(this)">1天</button>
+          <button class="reminder-day-btn active" data-days="3" onclick="toggleReminderDay(this)">3天</button>
+          <button class="reminder-day-btn active" data-days="7" onclick="toggleReminderDay(this)">7天</button>
+          <button class="reminder-day-btn" data-days="14" onclick="toggleReminderDay(this)">14天</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tags -->
+    <div class="form-row">
+      <label class="form-label">標籤</label>
+      <div class="tags-wrap" id="tagsWrap" onclick="document.getElementById('tagInput').focus()">
+        <input class="tags-input" id="tagInput" placeholder="輸入標籤後按 Enter...">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- NOTIFICATION PANEL -->
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-title">⏰ 到期提醒 <button class="notif-close" onclick="toggleNotifPanel()">×</button></div>
+  <div id="notifList"></div>
+</div>
+
+<!-- SAVE TOAST -->
+<div id="saveToast">✓ 已儲存</div>
+
+<!-- BACKUP BAR -->
+<div class="backup-bar">
+  <button onclick="exportBackup()">⬇ 備份</button>
+  <button onclick="importBackup()">⬆ 還原</button>
+  <button onclick="resetAll()" style="color:rgba(240,96,112,0.6)">↺ 重置</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  API ENDPOINT (local dev vs cloud)
+// ══════════════════════════════════════════
+const API_ENDPOINT = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? '/api/classify'
+  : 'https://second-brain-api.linyuyang0817.workers.dev/classify';
+
+// ══════════════════════════════════════════
+//  STORAGE
+// ══════════════════════════════════════════
+const LS_KEY = 'secondbrain_notes_v2';
+
+function loadNotes(){
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; }
+  catch(e){ return []; }
+}
+function saveNotes(notes){
+  try { localStorage.setItem(LS_KEY, JSON.stringify(notes)); } catch(e){}
+}
+
+let notes = loadNotes();
+if(notes.length === 0){
+  // Seed with user's actual context
+  notes = [
+    { id:'1', title:'Lucia 40 維護系統開發', cat:'project', content:'已完成：互動式俯視船況圖、BOM 表、維護記錄、localStorage 儲存。待辦：加入照片附件功能、考慮同步到 iCloud。', tags:['帆船','工具','claude'], date:'2025-02-22', voice:false },
+    { id:'2', title:'帆船知識 — 雙體船 vs 單體船', cat:'area', content:'雙體船優點：穩定性高、生活空間大、淺吃水。缺點：停泊費用較高、無法側傾航行。Lucia 40 是 Fountaine Pajot 的入門旗艦，適合藍水航行。', tags:['帆船','知識'], date:'2025-02-20', voice:false },
+    { id:'3', title:'Claude Code + Telegram 遠端控制', cat:'resource', content:'方案 B 使用 claude-telegram-bot，需要 bun runtime。流程：BotFather 建立 bot → 取得 Token 和 Chat ID → git clone → 設定 .env → bun run。記得設定 LaunchAgent 開機自動啟動。', tags:['AI','claude','telegram'], date:'2025-02-22', voice:false },
+    { id:'4', title:'帆船 IG 內容策略', cat:'project', content:'每日發文：週一 Reel、週二 Carousel、週三 Photo、週四 Reel、週五 Tips、週六 Poll + YouTube、週日 Reflection。主題：帆船生活、維修教學、航行記錄、知識分享。', tags:['內容','instagram','youtube'], date:'2025-02-22', voice:false },
+    { id:'5', title:'Second Brain 架構 — PARA 說明', cat:'resource', content:'P=Projects（有截止日的專案）A=Areas（持續負責的領域）R=Resources（參考資料）A=Archive（封存）。Capture→Organize→Distill→Express。工具不重要，習慣最重要。', tags:['知識管理','PARA'], date:'2025-02-21', voice:false },
+  ];
+  saveNotes(notes);
+}
+
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let currentCat   = 'all';
+let editingId    = null;
+let currentTags  = [];
+let currentCatSel = 'project';
+
+// Recording state
+let mediaRecorder = null;
+let audioChunks   = [];
+let recInterval   = null;
+let recSeconds    = 0;
+let recognition   = null;
+let isRecording   = false;
+
+// ══════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════
+function renderNotes(){
+  const q    = (document.getElementById('searchInput')?.value||'').toLowerCase();
+  const list = document.getElementById('noteList');
+
+  let filtered = notes.filter(n => {
+    const matchCat = currentCat === 'all' || n.cat === currentCat;
+    const matchQ   = !q || n.title.toLowerCase().includes(q) ||
+                     n.content.toLowerCase().includes(q) ||
+                     n.tags.some(t => t.toLowerCase().includes(q));
+    return matchCat && matchQ;
+  });
+
+  // Sort by date desc
+  filtered.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+  // Stats
+  renderStats();
+
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🌊</div>
+      <div class="empty-msg">${q ? '沒有找到相關筆記' : '還沒有任何筆記<br>按下 🎙 開始錄音或 ✏️ 新增'}</div>
+    </div>`;
+    return;
+  }
+
+  // Group by cat if showing all
+  if(currentCat === 'all' && !q){
+    const groups = { project:'🚀 Projects', area:'⚓ Areas', resource:'📚 Resources', archive:'🗄 Archive' };
+    let html = '';
+    Object.entries(groups).forEach(([cat, label]) => {
+      const items = filtered.filter(n => n.cat === cat);
+      if(items.length === 0) return;
+      html += `<div class="section-label">${label}</div>`;
+      items.forEach(n => { html += noteCardHTML(n); });
+    });
+    list.innerHTML = html;
+  } else {
+    list.innerHTML = filtered.map(noteCardHTML).join('');
+  }
+}
+
+function noteCardHTML(n){
+  const tags = (n.tags||[]).map(t => `<span class="note-tag">#${t}</span>`).join('');
+  const _db=n.cat==='project'&&n.dueDate?dueBadgeHTML(n.dueDate):'';
+  return `<div class="note-card" data-cat="${n.cat}" onclick="openEditor('${n.id}')">
+    <div class="note-meta">
+      <span class="note-cat-badge ${n.cat}">${catLabel(n.cat)}</span>
+      <div class="note-tags">${tags}</div>
+    </div>
+    <div class="note-title">${n.voice?'<span class="voice-icon">🎙</span>':''}${escHtml(n.title||'無標題')}</div>
+    <div class="note-preview">${escHtml(n.content||'')}</div>
+    ${_db}
+    <div class="note-date">${formatDate(n.date)}</div>
+  </div>`;
+}
+
+function catLabel(cat){
+  return {project:'Project', area:'Area', resource:'Resource', archive:'Archive'}[cat]||cat;
+}
+
+function renderStats(){
+  const bar = document.getElementById('statsBar');
+  const total = notes.length;
+  const proj  = notes.filter(n=>n.cat==='project').length;
+  const area  = notes.filter(n=>n.cat==='area').length;
+  const res   = notes.filter(n=>n.cat==='resource').length;
+  bar.innerHTML = `
+    <div class="stat-pill"><span class="stat-num">${total}</span> 筆記</div>
+    <div class="stat-pill" style="color:rgba(124,108,252,0.7)"><span class="stat-num" style="color:var(--p-proj)">${proj}</span> Projects</div>
+    <div class="stat-pill" style="color:rgba(74,184,208,0.7)"><span class="stat-num" style="color:var(--p-area)">${area}</span> Areas</div>
+    <div class="stat-pill" style="color:rgba(82,201,122,0.7)"><span class="stat-num" style="color:var(--p-res)">${res}</span> Resources</div>
+  `;
+}
+
+function filterCat(cat){
+  currentCat = cat;
+  document.querySelectorAll('.ptab').forEach(t => {
+    t.classList.toggle('active', t.dataset.cat === cat);
+  });
+  renderNotes();
+}
+
+function toggleSearch(){
+  const bar = document.getElementById('searchBar');
+  bar.classList.toggle('show');
+  if(bar.classList.contains('show')) document.getElementById('searchInput').focus();
+  else { document.getElementById('searchInput').value=''; renderNotes(); }
+}
+
+// ══════════════════════════════════════════
+//  EDITOR SHEET
+// ══════════════════════════════════════════
+function openEditor(id, prefillContent='', isVoice=false){
+  editingId = id;
+  const n = id ? notes.find(n=>n.id===id) : null;
+
+  document.getElementById('sheetTitle').textContent = id ? '編輯筆記' : '新增筆記';
+  document.getElementById('deleteBtn').style.display = id ? 'inline-flex' : 'none';
+  // Show AI classify button only when creating a new note
+  document.getElementById('aiClassifyBtn').style.display = id ? 'none' : 'inline-flex';
+
+  document.getElementById('noteTitle').value   = n?.title   || '';
+  document.getElementById('noteContent').value = n?.content || prefillContent;
+
+  // Transcript
+  window._lastNoteWasVoice = isVoice;
+  const tp = document.getElementById('transcriptPreview');
+  if(isVoice && prefillContent){
+    document.getElementById('transcriptText').textContent = prefillContent;
+    tp.classList.add('show');
+  } else {
+    tp.classList.remove('show');
+  }
+
+  // PARA
+  currentCatSel = n?.cat || 'project';
+  document.querySelectorAll('.para-opt').forEach(o => {
+    o.classList.toggle('selected', o.dataset.val === currentCatSel);
+  });
+
+  // Due date
+  document.getElementById('dueDateRow').style.display=currentCatSel==='project'?'block':'none';
+  document.getElementById('noteDueDate').value=n?.dueDate||'';
+  const _sd=n?.reminderDays?.length?n.reminderDays:[1,3,7];
+  document.querySelectorAll('.reminder-day-btn').forEach(b=>b.classList.toggle('active',_sd.includes(+b.dataset.days)));
+  // Tags
+  currentTags = n?.tags ? [...n.tags] : [];
+  renderTagChips();
+
+  document.getElementById('sheetOverlay').classList.add('show');
+  document.getElementById('bottomSheet').classList.add('show');
+  setTimeout(()=>{ if(!id) document.getElementById('noteTitle').focus(); }, 400);
+}
+
+function closeSheet(){
+  document.getElementById('sheetOverlay').classList.remove('show');
+  document.getElementById('bottomSheet').classList.remove('show');
+  editingId = null;
+}
+
+function selectCat(val){
+  currentCatSel = val;
+  document.querySelectorAll('.para-opt').forEach(o => {
+    o.classList.toggle('selected', o.dataset.val === val);
+  });
+  document.getElementById('dueDateRow').style.display = val==='project'?'block':'none';
+}
+
+function saveNote(){
+  const title   = document.getElementById('noteTitle').value.trim();
+  const content = document.getElementById('noteContent').value.trim();
+  if(!title && !content){ alert('請輸入標題或內容'); return; }
+
+  if(editingId){
+    const idx = notes.findIndex(n=>n.id===editingId);
+    if(idx !== -1){
+      const _due=currentCatSel==='project'?(document.getElementById('noteDueDate').value||null):null;const _rd=currentCatSel==='project'?[...document.querySelectorAll('.reminder-day-btn.active')].map(b=>+b.dataset.days):[];notes[idx] = { ...notes[idx], title, content, cat:currentCatSel, tags:[...currentTags], date:today(), dueDate:_due, reminderDays:_rd };
+    }
+  } else {
+    notes.unshift({
+      id: Date.now().toString(),
+      title: title || content.slice(0,30)+'...',
+      content, cat: currentCatSel,
+      tags: [...currentTags],
+      date: today(),
+      dueDate: currentCatSel==='project'?(document.getElementById('noteDueDate').value||null):null,
+      reminderDays: currentCatSel==='project'?[...document.querySelectorAll('.reminder-day-btn.active')].map(b=>+b.dataset.days):[],
+      voice: window._lastNoteWasVoice || false,
+    });
+    window._lastNoteWasVoice = false;
+  }
+
+  saveNotes(notes);
+  flashToast();
+  closeSheet();
+  renderNotes();
+}
+
+function deleteNote(){
+  if(!editingId) return;
+  if(!confirm('確定刪除這則筆記？')) return;
+  notes = notes.filter(n=>n.id!==editingId);
+  saveNotes(notes);
+  closeSheet();
+  renderNotes();
+}
+
+// ── TAGS ──
+function renderTagChips(){
+  const wrap = document.getElementById('tagsWrap');
+  const input = document.getElementById('tagInput');
+  wrap.innerHTML = '';
+  currentTags.forEach(tag => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `#${tag} <span class="remove" onclick="removeTag('${tag}')">×</span>`;
+    wrap.appendChild(chip);
+  });
+  wrap.appendChild(input);
+  input.focus();
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('tagInput').addEventListener('keydown', e=>{
+    if(e.key==='Enter'||e.key===','||e.key===' '){
+      e.preventDefault();
+      const val = e.target.value.trim().replace(/[,#\s]/g,'');
+      if(val && !currentTags.includes(val)){ currentTags.push(val); renderTagChips(); }
+      else e.target.value='';
+    }
+  });
+});
+
+function removeTag(tag){
+  currentTags = currentTags.filter(t=>t!==tag);
+  renderTagChips();
+}
+
+// ══════════════════════════════════════════
+//  VOICE RECORDING + SPEECH-TO-TEXT
+// ══════════════════════════════════════════
+function toggleRecord(){
+  if(isRecording) stopRecord();
+  else startRecord();
+}
+
+function startRecord(){
+  // Step 1: Always request mic permission first (must be in user gesture context)
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+      // Mic granted! Save stream for MediaRecorder fallback
+      window._sbMicStream = stream;
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if(SpeechRecognition){
+        startSpeechRecognition(SpeechRecognition);
+      } else {
+        // No SpeechRecognition — use MediaRecorder directly with this stream
+        startMediaRecorderWithStream(stream);
+      }
+    })
+    .catch(()=>{
+      alert('❌ 無法存取麥克風，請在瀏覽器或系統設定中允許麥克風權限後再試。');
+    });
+}
+
+function startSpeechRecognition(SpeechRecognition){
+  recognition = new SpeechRecognition();
+  recognition.lang = 'zh-TW';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  window._sbFinal = '';
+  window._sbInterim = '';
+
+  recognition.onstart = () => {
+    isRecording = true;
+    window._sbFinal = '';
+    window._sbInterim = '';
+    // SpeechRecognition manages its own mic, release the pre-obtained stream
+    if(window._sbMicStream){
+      window._sbMicStream.getTracks().forEach(t => t.stop());
+      window._sbMicStream = null;
+    }
+    startRecordUI();
+  };
+
+  recognition.onresult = (event) => {
+    window._sbInterim = '';
+    for(let i = event.resultIndex; i < event.results.length; i++){
+      const t = event.results[i][0].transcript;
+      if(event.results[i].isFinal) window._sbFinal += t;
+      else window._sbInterim += t;
+    }
+    document.getElementById('vsTimer').textContent =
+      window._sbFinal.slice(-60) + (window._sbInterim ? '…' : '');
+  };
+
+  recognition.onerror = (e) => {
+    console.warn('Speech recognition error:', e.error);
+    // Store error for onend to handle fallback
+    window._sbRecogError = e.error;
+  };
+
+  recognition.onend = () => {
+    const err = window._sbRecogError;
+    window._sbRecogError = null;
+
+    // If SpeechRecognition failed, fallback to MediaRecorder
+    if(err) {
+      isRecording = false;
+      stopRecordUI();
+      recognition = null;
+      window._sbFinal = '';
+      window._sbInterim = '';
+      console.log('SpeechRecognition failed (' + err + '), falling back to MediaRecorder...');
+      // Mic was already granted in startRecord(), so re-request will succeed
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => startMediaRecorderWithStream(stream))
+        .catch(() => flashToastCustom('⚠️ 無法啟動錄音，請檢查麥克風權限', '#f06070'));
+      return;
+    }
+
+    // Normal end — process transcript
+    isRecording = false;
+    stopRecordUI();
+
+    const text = (window._sbFinal + window._sbInterim).trim();
+    window._sbFinal = '';
+    window._sbInterim = '';
+
+    if(text){
+      // Send transcript to AI for classification, then open editor
+      showProcessing('AI 分類中...');
+      classifyWithAI(text).then(result => {
+        hideProcessing();
+        if(result){
+          openEditorWithAI(text, result);
+        } else {
+          openEditor(null, text, true);
+        }
+      });
+    } else {
+      flashToastCustom('⚠️ 沒有偵測到語音，請再試一次', '#f0a040');
+    }
+  };
+
+  try { recognition.start(); }
+  catch(e){
+    // SpeechRecognition.start() failed — fallback to MediaRecorder
+    recognition = null;
+    if(window._sbMicStream){
+      startMediaRecorderWithStream(window._sbMicStream);
+      window._sbMicStream = null;
+    } else {
+      alert('無法啟動語音辨識，請確認麥克風權限。');
+    }
+  }
+}
+
+function startMediaRecorderWithStream(stream){
+  mediaRecorder = new MediaRecorder(stream);
+  audioChunks = [];
+  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+  mediaRecorder.onstop = () => {
+    stream.getTracks().forEach(t => t.stop());
+    showProcessing('處理錄音中...');
+    setTimeout(()=>{
+      hideProcessing();
+      openEditor(null, '', true);
+    }, 1000);
+  };
+  mediaRecorder.start();
+  isRecording = true;
+  startRecordUI();
+}
+
+function stopRecord(){
+  isRecording = false;
+  if(recognition){
+    // Do NOT call stopRecordUI() here.
+    // recognition.onend will fire after .stop() and handle everything.
+    const r = recognition;
+    recognition = null;
+    r.stop();
+  } else if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+    mediaRecorder.stop();
+    stopRecordUI();
+  } else {
+    stopRecordUI();
+  }
+}
+
+function startRecordUI(){
+  recSeconds = 0;
+  document.getElementById('recordBtn').classList.add('recording');
+  document.getElementById('voiceStatus').classList.add('show');
+  document.getElementById('fabLabel').textContent = '錄音中...';
+  document.getElementById('recTimer').classList.add('show');
+  document.getElementById('vsTimer').textContent = '00:00';
+  recInterval = setInterval(() => {
+    recSeconds++;
+    const m = String(Math.floor(recSeconds / 60)).padStart(2, '0');
+    const s = String(recSeconds % 60).padStart(2, '0');
+    const display = m + ':' + s;
+    document.getElementById('recTimer').textContent = display;
+    document.getElementById('vsTimer').textContent = display;
+  }, 1000);
+}
+
+function stopRecordUI(){
+  clearInterval(recInterval);
+  document.getElementById('recordBtn').classList.remove('recording');
+  document.getElementById('voiceStatus').classList.remove('show');
+  document.getElementById('fabLabel').textContent = '按下錄音';
+  document.getElementById('recTimer').classList.remove('show');
+  document.getElementById('vsTimer').textContent = '00:00';
+}
+
+function showProcessing(msg){
+  document.getElementById('procText').textContent = msg||'處理中...';
+  document.getElementById('processingOverlay').classList.add('show');
+}
+function hideProcessing(){
+  document.getElementById('processingOverlay').classList.remove('show');
+}
+
+// ══════════════════════════════════════════
+//  AI CLASSIFICATION (Claude Haiku)
+// ══════════════════════════════════════════
+async function classifyWithAI(transcript){
+  // Gather existing tags for prompt context
+  const allTags = [...new Set(notes.flatMap(n => n.tags || []))];
+
+  try {
+    const resp = await fetch(API_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript, existingTags: allTags })
+    });
+
+    if(!resp.ok) throw new Error('API ' + resp.status);
+
+    const data = await resp.json();
+    // Validate response shape
+    if(!data.title || !data.cat || !Array.isArray(data.tags)){
+      throw new Error('Invalid API response');
+    }
+    if(!['project','area','resource','archive'].includes(data.cat)){
+      data.cat = 'resource';
+    }
+    return data;
+  } catch(e){
+    console.warn('AI classification failed:', e);
+    return null;
+  }
+}
+
+function openEditorWithAI(transcript, ai){
+  // Open editor in new-note mode with transcript as content
+  openEditor(null, transcript, true);
+
+  // Override with AI suggestions
+  document.getElementById('noteTitle').value = ai.title;
+
+  // Select the AI-suggested category
+  selectCat(ai.cat);
+
+  // Set AI-suggested tags
+  currentTags = [...ai.tags];
+  renderTagChips();
+
+  flashToastCustom('✦ AI 已自動分類', '#7c6cfc');
+}
+
+async function manualClassify(){
+  const content = document.getElementById('noteContent').value.trim();
+  if(!content){ flashToastCustom('請先輸入內容', '#f0a040'); return; }
+
+  showProcessing('AI 分類中...');
+  const result = await classifyWithAI(content);
+  hideProcessing();
+
+  if(result){
+    document.getElementById('noteTitle').value = result.title;
+    selectCat(result.cat);
+    currentTags = [...result.tags];
+    renderTagChips();
+    flashToastCustom('✦ AI 已自動分類', '#7c6cfc');
+  } else {
+    flashToastCustom('⚠️ AI 分類失敗，請手動填寫', '#f0a040');
+  }
+}
+
+// ══════════════════════════════════════════
+//  BACKUP / RESTORE
+// ══════════════════════════════════════════
+function exportBackup(){
+  const blob = new Blob([JSON.stringify({v:2, exportedAt:new Date().toISOString(), notes}, null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'second-brain-'+today()+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try{
+        const data = JSON.parse(ev.target.result);
+        if(data.notes){ notes = data.notes; saveNotes(notes); renderNotes(); alert('✅ 備份還原成功！'); }
+        else throw new Error('invalid');
+      } catch(e){ alert('❌ 無效的備份檔案'); }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+}
+
+function resetAll(){
+  if(!confirm('⚠️ 確定清除所有筆記？此操作無法復原。')) return;
+  localStorage.removeItem(LS_KEY);
+  notes = []; saveNotes(notes); location.reload();
+}
+
+// ══════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════
+function today(){ return new Date().toISOString().slice(0,10); }
+function fmtTime(s){ return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+function formatDate(d){ if(!d) return ''; const dt=new Date(d); return `${dt.getMonth()+1}月${dt.getDate()}日`; }
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function flashToast(){
+  const t = document.getElementById('saveToast');
+  t.style.opacity='1';
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>{ t.style.opacity='0'; }, 2000);
+}
+
+
+// ── REMINDER & NOTIFICATION ──
+function toggleReminderDay(b){b.classList.toggle('active');}
+
+function dueBadgeHTML(d){
+  if(!d)return'';
+  const t=new Date();t.setHours(0,0,0,0);
+  const x=new Date(d);x.setHours(0,0,0,0);
+  const diff=Math.round((x-t)/86400000);
+  if(diff<0) return'<div class="due-badge urgent">⚠️ 已逾期'+Math.abs(diff)+'天</div>';
+  if(diff===0)return'<div class="due-badge urgent">🔴 今天到期</div>';
+  if(diff<=3) return'<div class="due-badge urgent">🔴 '+diff+'天後到期</div>';
+  if(diff<=7) return'<div class="due-badge soon">🟡 '+diff+'天後到期</div>';
+  if(diff<=14)return'<div class="due-badge ok">🟢 '+diff+'天後到期</div>';
+  return'<div class="due-badge ok">📅 '+formatDate(d)+'</div>';
+}
+
+function toggleNotifPanel(){
+  const p=document.getElementById('notifPanel');
+  p.classList.toggle('show');
+  if(p.classList.contains('show'))renderNotifList();
+}
+
+function renderNotifList(){
+  const t=new Date();t.setHours(0,0,0,0);
+  const items=notes
+    .filter(n=>n.cat==='project'&&n.dueDate)
+    .map(n=>{const d=new Date(n.dueDate);d.setHours(0,0,0,0);return{...n,diff:Math.round((d-t)/86400000)};})
+    .filter(n=>n.diff<=14).sort((a,b)=>a.diff-b.diff);
+  const el=document.getElementById('notifList');
+  if(!items.length){el.innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">近期沒有到期的 Projects ✅</div>';return;}
+  el.innerHTML=items.map(n=>{
+    const c=n.diff<=3?'var(--red)':n.diff<=7?'var(--amber)':'var(--green)';
+    const l=n.diff<0?'逾期'+Math.abs(n.diff)+'天':n.diff===0?'今天':n.diff+'天後';
+    return`<div class="notif-item" onclick="toggleNotifPanel();openEditor('${n.id}')"><div class="notif-item-dot" style="background:${c}"></div><div class="notif-item-text">${escHtml(n.title)}</div><div class="notif-item-days" style="color:${c}">${l}</div></div>`;
+  }).join('');
+}
+
+function updateBellBadge(){
+  const t=new Date();t.setHours(0,0,0,0);
+  const u=notes.filter(n=>{if(n.cat!=='project'||!n.dueDate)return false;const d=new Date(n.dueDate);d.setHours(0,0,0,0);return Math.round((d-t)/86400000)<=3;}).length;
+  const b=document.getElementById('notifBell');
+  if(b)b.textContent=u>0?'🔔':'🔕';
+}
+
+async function sendTestNotif(){
+  if(!('Notification' in window)){alert('請用 Safari 並加入主畫面後再試');return;}
+  if(Notification.permission!=='granted'){
+    const r=await Notification.requestPermission();
+    if(r!=='granted'){alert('請允許通知權限');return;}
+  }
+  new Notification('✦ Second Brain 通知已啟用！',{body:'到期提醒會在每天開啟 App 時自動檢查 🎉'});
+  localStorage.setItem('sb_notif_enabled','1');
+  updateBellBadge();
+}
+
+function checkAndFireNotifications(){
+  if(Notification?.permission!=='granted')return;
+  const t=new Date();t.setHours(0,0,0,0);
+  const ds=t.toISOString().slice(0,10);
+  if(localStorage.getItem('sb_last_notif_check')===ds)return;
+  localStorage.setItem('sb_last_notif_check',ds);
+  const hits=[];
+  notes.forEach(n=>{
+    if(n.cat!=='project'||!n.dueDate)return;
+    const d=new Date(n.dueDate);d.setHours(0,0,0,0);
+    const diff=Math.round((d-t)/86400000);
+    const days=n.reminderDays?.length?n.reminderDays:[1,3,7];
+    if(days.includes(diff)||(diff<0&&diff>=-1))hits.push({title:n.title,diff});
+  });
+  if(!hits.length)return;
+  const body=hits.length===1?(hits[0].diff<=0?`「${hits[0].title}」已到期！`:`「${hits[0].title}」${hits[0].diff} 天後到期`):`有 ${hits.length} 個 Projects 即將到期`;
+  new Notification('⏰ Second Brain 到期提醒',{body});
+}
+
+// ══════════════════════════════════════════
+//  URL SCHEME RECEIVER
+//  接收來自 iPhone Shortcuts 的筆記推送
+//
+//  支援兩種方式：
+//  1. URL hash:  secondbrain.html#push=BASE64_JSON
+//  2. URL query: secondbrain.html?push=BASE64_JSON
+//
+//  JSON 格式：
+//  { title, cat, content, tags: [] }
+// ══════════════════════════════════════════
+
+function checkIncomingNote(){
+  // 從 hash 或 query string 取得推送資料
+  let raw = null;
+
+  // 方式 1：hash  (#push=...)
+  const hash = window.location.hash;
+  if(hash.startsWith('#push=')){
+    raw = hash.slice(6);
+    // 清除 URL hash 避免重複觸發
+    history.replaceState(null, '', window.location.pathname);
+  }
+
+  // 方式 2：query string (?push=...)
+  if(!raw){
+    const params = new URLSearchParams(window.location.search);
+    if(params.has('push')){
+      raw = params.get('push');
+      history.replaceState(null, '', window.location.pathname);
+    }
+  }
+
+  if(!raw) return;
+
+  try {
+    // Fix URL-safe base64 (replace - with + and _ with /)
+    const b64 = raw.replace(/-/g,'+').replace(/_/g,'/');
+    // Pad if needed
+    const padded = b64 + '=='.slice(0, (4 - b64.length % 4) % 4);
+    const decoded = decodeURIComponent(escape(atob(padded)));
+    // Strip any markdown code fences Claude might add
+    const cleaned = decoded.replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
+    const json = JSON.parse(cleaned);
+    pushIncomingNote(json);
+  } catch(e){
+    console.warn('Second Brain: 無法解析推送資料', e, 'raw:', raw.slice(0,100));
+    // 嘗試直接 JSON parse（未 encode 的情況）
+    try {
+      const cleaned = decodeURIComponent(raw).replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
+      const json = JSON.parse(cleaned);
+      pushIncomingNote(json);
+    } catch(e2){
+      console.warn('Second Brain: 第二次解析也失敗', e2);
+      showIncomingError();
+    }
+  }
+}
+
+function pushIncomingNote(data){
+  if(!data || typeof data !== 'object'){
+    flashToastCustom('❌ 推送資料無效', '#f06070');
+    return;
+  }
+
+  const note = {
+    id:      Date.now().toString(),
+    title:   (data.title   || '語音筆記').trim(),
+    cat:     (['project','area','resource','archive'].includes(data.cat) ? data.cat : 'resource'),
+    content: (data.content || '').trim(),
+    tags:    Array.isArray(data.tags) ? data.tags : [],
+    date:    today(),
+    voice:   true,
+    reminderDays: [1,3,7],
+  };
+
+  // Load fresh from storage first to avoid overwriting parallel changes
+  notes = loadNotes();
+  notes.unshift(note);
+  saveNotes(notes);
+  renderNotes();
+  updateBellBadge();
+
+  // 顯示推送成功動畫
+  showPushSuccess(note);
+}
+
+// ── 推送成功動畫 ──
+function showPushSuccess(note){
+  const catColors = {
+    project:  '#7c6cfc',
+    area:     '#4ab8d0',
+    resource: '#52c97a',
+    archive:  'rgba(255,255,255,0.5)',
+  };
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position:fixed; inset:0; z-index:200;
+    background:rgba(0,0,0,0.85);
+    display:flex; align-items:center; justify-content:center;
+    padding:1.5rem;
+    animation: fadeInPush 0.3s ease both;
+  `;
+
+  const card = document.createElement('div');
+  card.style.cssText = `
+    background:#16161c;
+    border:1px solid rgba(255,255,255,0.1);
+    border-left: 4px solid ${catColors[note.cat]||'#7c6cfc'};
+    border-radius:16px;
+    padding:1.5rem;
+    width:100%; max-width:340px;
+    animation: slideUpPush 0.35s cubic-bezier(0.32,0.72,0,1) both;
+  `;
+
+  const catLabel = {project:'🚀 Project', area:'⚓ Area', resource:'📚 Resource', archive:'🗄 Archive'}[note.cat];
+  const tagsHtml = note.tags.map(t=>`<span style="background:rgba(240,192,96,0.15);border:1px solid rgba(240,192,96,0.3);border-radius:20px;padding:0.1rem 0.45rem;font-size:0.58rem;color:#f0c060;font-family:'DM Mono',monospace">#${t}</span>`).join(' ');
+
+  card.innerHTML = `
+    <div style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;color:#52c97a;text-transform:uppercase;margin-bottom:0.8rem">
+      ✦ 筆記已推送進來
+    </div>
+    <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:#e8e6f0;margin-bottom:0.5rem;line-height:1.3">
+      🎙 ${escHtml(note.title)}
+    </div>
+    <div style="font-size:0.82rem;color:rgba(232,230,240,0.5);line-height:1.5;margin-bottom:0.8rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">
+      ${escHtml(note.content)}
+    </div>
+    <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.1rem">
+      <span style="background:rgba(124,108,252,0.15);border:1px solid rgba(124,108,252,0.3);border-radius:20px;padding:0.1rem 0.5rem;font-family:'DM Mono',monospace;font-size:0.55rem;color:${catColors[note.cat]}">${catLabel}</span>
+      ${tagsHtml}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+      <button onclick="editPushedNote('${note.id}')" style="padding:0.55rem;border-radius:10px;background:rgba(124,108,252,0.15);border:1px solid rgba(124,108,252,0.3);color:#a594fd;font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.06em;cursor:pointer">
+        ✏️ 編輯
+      </button>
+      <button onclick="dismissPush()" style="padding:0.55rem;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(232,230,240,0.6);font-family:'DM Mono',monospace;font-size:0.62rem;letter-spacing:0.06em;cursor:pointer">
+        ✓ 完成
+      </button>
+    </div>
+  `;
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  window._pushOverlay = overlay;
+
+  // 3秒後自動關閉
+  window._pushTimer = setTimeout(dismissPush, 4000);
+}
+
+function editPushedNote(id){
+  dismissPush();
+  setTimeout(()=>{ openEditor(id); }, 200);
+}
+
+function dismissPush(){
+  clearTimeout(window._pushTimer);
+  if(window._pushOverlay){
+    window._pushOverlay.style.animation = 'fadeOutPush 0.25s ease forwards';
+    setTimeout(()=>{ window._pushOverlay?.remove(); window._pushOverlay=null; }, 250);
+  }
+}
+
+function showIncomingError(){
+  flashToastCustom('❌ 推送資料格式錯誤', '#f06070');
+}
+
+function flashToastCustom(msg, color='#52c97a'){
+  const t = document.getElementById('saveToast');
+  t.textContent = msg;
+  t.style.background = color;
+  t.style.opacity = '1';
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>{ t.style.opacity='0'; t.textContent='✓ 已儲存'; t.style.background=''; }, 2500);
+}
+
+// 加入推送動畫 CSS
+const pushStyle = document.createElement('style');
+pushStyle.textContent = `
+@keyframes fadeInPush  { from{opacity:0} to{opacity:1} }
+@keyframes fadeOutPush { from{opacity:1} to{opacity:0} }
+@keyframes slideUpPush { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+`;
+document.head.appendChild(pushStyle);
+
+// ══════════════════════════════════════════
+//  HELPERS (補充 flashToast 保持相容)
+// ══════════════════════════════════════════
+// (flashToast 已定義於上方，此處不重複)
+
+// ══════════════════════════════════════════
+//  PWA — SERVICE WORKER REGISTRATION
+// ══════════════════════════════════════════
+const SW_VERSION = '2.0.0';
+
+async function registerSW(){
+  if(!('serviceWorker' in navigator)){
+    console.log('SW not supported');
+    return null;
+  }
+  try {
+    const reg = await navigator.serviceWorker.register('sw.js', { scope: './' });
+    console.log('SW registered:', reg.scope);
+    return reg;
+  } catch(e){
+    console.warn('SW registration failed:', e);
+    return null;
+  }
+}
+
+// ── Push permission + subscription ──
+async function subscribePush(){
+  if(!('Notification' in window)){ alert('此裝置不支援通知'); return; }
+  if(!('serviceWorker' in navigator)){ alert('需要 HTTPS 環境才能啟用背景推送\n請先部署到 GitHub Pages'); return; }
+
+  const perm = await Notification.requestPermission();
+  if(perm !== 'granted'){ alert('請允許通知權限'); return; }
+
+  const reg = await navigator.serviceWorker.ready;
+
+  // Schedule today check via SW message
+  reg.active?.postMessage({
+    type: 'SCHEDULE_CHECK',
+    notes: JSON.stringify(notes)
+  });
+
+  // Also fire immediately if there are due items
+  syncNotesToSW();
+
+  localStorage.setItem('sb_notif_enabled','1');
+  localStorage.setItem('sb_notif_perm','granted');
+
+  new Notification('✦ Second Brain 通知已啟用', {
+    body: '每天早上 8:00 會自動推送到期提醒 🎉',
+    icon: 'icon-192.png',
+    badge: 'icon-192.png',
+    tag: 'sb-setup'
+  });
+  updateBellBadge();
+  flashToastCustom('🔔 通知已啟用！', '#52c97a');
+}
+
+// ── Sync notes to SW whenever they change ──
+function syncNotesToSW(){
+  if(!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(reg => {
+    reg.active?.postMessage({
+      type: 'SYNC_NOTES',
+      notes: JSON.stringify(notes),
+      todayStr: new Date().toISOString().slice(0,10)
+    });
+  }).catch(()=>{});
+}
+
+// Override sendTestNotif to use new PWA flow
+async function sendTestNotif(){ await subscribePush(); }
+
+// Listen for messages from SW (e.g. SW asking for notes data)
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message', e => {
+    if(e.data?.type === 'REQUEST_NOTES'){
+      syncNotesToSW();
+    }
+    if(e.data?.type === 'OPEN_NOTE' && e.data.id){
+      openEditor(e.data.id);
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+renderNotes();
+updateBellBadge();
+
+// Register SW
+registerSW().then(reg => {
+  if(reg){
+    // Sync notes to SW on every load
+    reg.ready?.then(() => syncNotesToSW());
+    // Check foreground notifications as fallback
+    setTimeout(checkAndFireNotifications, 1500);
+  }
+});
+
+// 檢查是否有來自 Shortcuts 的推送
+setTimeout(checkIncomingNote, 300);
+
+// 監聽 hash 變化（App 已在前台時的推送）
+window.addEventListener('hashchange', checkIncomingNote);
+
+// Sync notes to SW whenever notes change (hook into saveNotes)
+const _origSaveNotes = saveNotes;
+// saveNotes is not hoistable here, so we patch after definition
+setTimeout(() => {
+  const origFn = window.saveNotes;
+  if(origFn) {
+    window.saveNotes = function(n){
+      origFn(n);
+      syncNotesToSW();
+      updateBellBadge();
+    };
+  }
+}, 100);
+</script>
+</body>
+</html>
