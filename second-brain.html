@@ -761,9 +761,10 @@ body::before {
 // ══════════════════════════════════════════
 //  API ENDPOINT (local dev vs cloud)
 // ══════════════════════════════════════════
-const API_ENDPOINT = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-  ? '/api/classify'
-  : 'https://second-brain-api.alley2204.workers.dev/classify';
+const IS_LOCAL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+const WORKER_BASE = IS_LOCAL ? '' : 'https://second-brain-api.alley2204.workers.dev';
+const API_ENDPOINT = IS_LOCAL ? '/api/classify' : `${WORKER_BASE}/classify`;
+const PENDING_ENDPOINT = `${WORKER_BASE}/pending`;
 
 // ══════════════════════════════════════════
 //  STORAGE
@@ -1499,11 +1500,42 @@ registerSW().then(reg => {
   }
 });
 
-// 檢查是否有來自 Shortcuts 的推送
+// 檢查是否有來自 Shortcuts 的推送（URL scheme 方式，保留向下相容）
 setTimeout(checkIncomingNote, 300);
 
 // 監聽 hash 變化（App 已在前台時的推送）
 window.addEventListener('hashchange', checkIncomingNote);
+
+// ══════════════════════════════════════════
+//  KV Inbox：從 Worker /pending 拉取語音筆記
+//  支援主畫面 PWA 與 Safari 共享筆記
+// ══════════════════════════════════════════
+async function checkPendingNotes(){
+  if(IS_LOCAL) return; // 本機開發不需要
+  try {
+    const resp = await fetch(PENDING_ENDPOINT);
+    if(!resp.ok) return;
+    const { notes } = await resp.json();
+    if(!Array.isArray(notes) || notes.length === 0) return;
+    for(const note of notes){
+      pushIncomingNote(note);
+      // 多筆時錯開一點避免 id 碰撞（id 用 Date.now）
+      await new Promise(r => setTimeout(r, 50));
+    }
+  } catch(e){
+    console.warn('Second Brain: checkPendingNotes failed', e);
+  }
+}
+
+// App 開啟時自動檢查 KV inbox
+setTimeout(checkPendingNotes, 800);
+
+// 每次回到前台也檢查（從其他 App 切回來時）
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible') {
+    setTimeout(checkPendingNotes, 500);
+  }
+});
 
 // Sync notes to SW whenever notes change (hook into saveNotes)
 const _origSaveNotes = saveNotes;
