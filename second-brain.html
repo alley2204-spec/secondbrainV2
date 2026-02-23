@@ -278,7 +278,7 @@ body::before {
 .empty-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
 .empty-msg  { font-size: 0.88rem; line-height: 1.6; }
 
-/* ── FAB (Voice Record Button) ── */
+/* ── FAB ── */
 .fab-wrap {
   position: fixed;
   bottom: 1.8rem;
@@ -291,30 +291,6 @@ body::before {
   z-index: 50;
 }
 .fab-row { display: flex; gap: 0.8rem; align-items: center; }
-
-.fab {
-  width: 64px; height: 64px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: none;
-  cursor: pointer;
-  display: flex; align-items:center; justify-content:center;
-  font-size: 1.5rem;
-  box-shadow: 0 4px 24px rgba(124,108,252,0.45);
-  transition: all 0.2s;
-  position: relative;
-  color: #fff;
-}
-.fab:hover { transform: scale(1.06); box-shadow: 0 6px 30px rgba(124,108,252,0.6); }
-.fab.recording {
-  background: var(--red);
-  animation: pulse 1s infinite;
-  box-shadow: 0 4px 24px rgba(240,96,112,0.5);
-}
-@keyframes pulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(240,96,112,0.5); }
-  50%      { box-shadow: 0 0 0 14px rgba(240,96,112,0); }
-}
 
 .fab-mini {
   width: 46px; height: 46px;
@@ -329,20 +305,6 @@ body::before {
 }
 .fab-mini:hover { border-color: var(--accent); color: var(--accent2); background: rgba(124,108,252,0.1); }
 
-.fab-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.58rem;
-  letter-spacing: 0.1em;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-.recording-timer {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.7rem;
-  color: var(--red);
-  display: none;
-}
-.recording-timer.show { display: block; }
 
 /* ══════════════════════════
    BOTTOM SHEET (Note Editor)
@@ -599,54 +561,6 @@ body::before {
 }
 .backup-bar button:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
 
-/* ── VOICE STATUS ── */
-.voice-status {
-  position: fixed;
-  top: 50%; left: 50%;
-  transform: translate(-50%,-50%);
-  background: var(--bg2);
-  border: 1px solid rgba(240,96,112,0.4);
-  border-radius: 20px;
-  padding: 1.5rem 2rem;
-  text-align: center;
-  z-index: 60;
-  display: none;
-  min-width: 220px;
-}
-.voice-status.show { display: block; }
-.vs-wave {
-  display: flex; justify-content: center; gap: 4px;
-  margin-bottom: 0.8rem;
-}
-.vs-bar {
-  width: 4px; border-radius: 2px;
-  background: var(--red);
-  animation: wave 0.8s ease-in-out infinite;
-}
-.vs-bar:nth-child(1){height:16px;animation-delay:0s}
-.vs-bar:nth-child(2){height:24px;animation-delay:0.1s}
-.vs-bar:nth-child(3){height:32px;animation-delay:0.2s}
-.vs-bar:nth-child(4){height:24px;animation-delay:0.3s}
-.vs-bar:nth-child(5){height:16px;animation-delay:0.4s}
-@keyframes wave {
-  0%,100%{transform:scaleY(0.4)} 50%{transform:scaleY(1)}
-}
-.vs-text {
-  font-family: 'DM Mono', monospace; font-size: 0.7rem;
-  letter-spacing: 0.1em; color: var(--red); text-transform: uppercase;
-  margin-bottom: 0.3rem;
-}
-.vs-timer {
-  font-family: 'DM Mono', monospace; font-size: 1.2rem;
-  color: var(--text); margin-bottom: 0.8rem;
-}
-.vs-stop {
-  background: var(--red); border: none; border-radius: 20px;
-  color: #fff; font-family: 'DM Mono', monospace; font-size: 0.65rem;
-  letter-spacing: 0.08em; padding: 0.45rem 1.2rem;
-  cursor: pointer; transition: all 0.2s;
-}
-.vs-stop:hover { filter: brightness(1.2); }
 
 /* ── PROCESSING OVERLAY ── */
 .processing {
@@ -731,24 +645,10 @@ body::before {
   <div class="fab-wrap">
     <div class="fab-row">
       <button class="fab-mini" onclick="openEditor(null)" title="新增文字筆記">✏️</button>
-      <button class="fab" id="recordBtn" onclick="toggleRecord()" title="語音錄音">🎙</button>
       <button class="fab-mini" onclick="exportBackup()" title="備份">⬇</button>
     </div>
-    <div class="fab-label" id="fabLabel">按住錄音</div>
-    <div class="recording-timer" id="recTimer">00:00</div>
   </div>
 
-</div>
-
-<!-- VOICE STATUS OVERLAY -->
-<div class="voice-status" id="voiceStatus">
-  <div class="vs-wave">
-    <div class="vs-bar"></div><div class="vs-bar"></div><div class="vs-bar"></div>
-    <div class="vs-bar"></div><div class="vs-bar"></div>
-  </div>
-  <div class="vs-text">🎙 錄音中</div>
-  <div class="vs-timer" id="vsTimer">00:00</div>
-  <button class="vs-stop" onclick="stopRecord()">停止錄音</button>
 </div>
 
 <!-- PROCESSING -->
@@ -899,13 +799,6 @@ let editingId    = null;
 let currentTags  = [];
 let currentCatSel = 'project';
 
-// Recording state
-let mediaRecorder = null;
-let audioChunks   = [];
-let recInterval   = null;
-let recSeconds    = 0;
-let recognition   = null;
-let isRecording   = false;
 
 // ══════════════════════════════════════════
 //  RENDER
@@ -1130,185 +1023,9 @@ function removeTag(tag){
 }
 
 // ══════════════════════════════════════════
-//  VOICE RECORDING + SPEECH-TO-TEXT
+//  VOICE RECORDING (已移除，改由 iOS 捷徑處理)
 // ══════════════════════════════════════════
-function toggleRecord(){
-  if(isRecording) stopRecord();
-  else startRecord();
-}
 
-function startRecord(){
-  // Step 1: Always request mic permission first (must be in user gesture context)
-  navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(stream => {
-      // Mic granted! Save stream for MediaRecorder fallback
-      window._sbMicStream = stream;
-
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if(SpeechRecognition){
-        startSpeechRecognition(SpeechRecognition);
-      } else {
-        // No SpeechRecognition — use MediaRecorder directly with this stream
-        startMediaRecorderWithStream(stream);
-      }
-    })
-    .catch(()=>{
-      alert('❌ 無法存取麥克風，請在瀏覽器或系統設定中允許麥克風權限後再試。');
-    });
-}
-
-function startSpeechRecognition(SpeechRecognition){
-  recognition = new SpeechRecognition();
-  recognition.lang = 'zh-TW';
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
-  window._sbFinal = '';
-  window._sbInterim = '';
-
-  recognition.onstart = () => {
-    isRecording = true;
-    window._sbFinal = '';
-    window._sbInterim = '';
-    // SpeechRecognition manages its own mic, release the pre-obtained stream
-    if(window._sbMicStream){
-      window._sbMicStream.getTracks().forEach(t => t.stop());
-      window._sbMicStream = null;
-    }
-    startRecordUI();
-  };
-
-  recognition.onresult = (event) => {
-    window._sbInterim = '';
-    for(let i = event.resultIndex; i < event.results.length; i++){
-      const t = event.results[i][0].transcript;
-      if(event.results[i].isFinal) window._sbFinal += t;
-      else window._sbInterim += t;
-    }
-    document.getElementById('vsTimer').textContent =
-      window._sbFinal.slice(-60) + (window._sbInterim ? '…' : '');
-  };
-
-  recognition.onerror = (e) => {
-    console.warn('Speech recognition error:', e.error);
-    // Store error for onend to handle fallback
-    window._sbRecogError = e.error;
-  };
-
-  recognition.onend = () => {
-    const err = window._sbRecogError;
-    window._sbRecogError = null;
-
-    // If SpeechRecognition failed, fallback to MediaRecorder
-    if(err) {
-      isRecording = false;
-      stopRecordUI();
-      recognition = null;
-      window._sbFinal = '';
-      window._sbInterim = '';
-      console.log('SpeechRecognition failed (' + err + '), falling back to MediaRecorder...');
-      // Mic was already granted in startRecord(), so re-request will succeed
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => startMediaRecorderWithStream(stream))
-        .catch(() => flashToastCustom('⚠️ 無法啟動錄音，請檢查麥克風權限', '#f06070'));
-      return;
-    }
-
-    // Normal end — process transcript
-    isRecording = false;
-    stopRecordUI();
-
-    const text = (window._sbFinal + window._sbInterim).trim();
-    window._sbFinal = '';
-    window._sbInterim = '';
-
-    if(text){
-      // Send transcript to AI for classification, then open editor
-      showProcessing('AI 分類中...');
-      classifyWithAI(text).then(result => {
-        hideProcessing();
-        if(result){
-          openEditorWithAI(text, result);
-        } else {
-          openEditor(null, text, true);
-        }
-      });
-    } else {
-      flashToastCustom('⚠️ 沒有偵測到語音，請再試一次', '#f0a040');
-    }
-  };
-
-  try { recognition.start(); }
-  catch(e){
-    // SpeechRecognition.start() failed — fallback to MediaRecorder
-    recognition = null;
-    if(window._sbMicStream){
-      startMediaRecorderWithStream(window._sbMicStream);
-      window._sbMicStream = null;
-    } else {
-      alert('無法啟動語音辨識，請確認麥克風權限。');
-    }
-  }
-}
-
-function startMediaRecorderWithStream(stream){
-  mediaRecorder = new MediaRecorder(stream);
-  audioChunks = [];
-  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-  mediaRecorder.onstop = () => {
-    stream.getTracks().forEach(t => t.stop());
-    showProcessing('處理錄音中...');
-    setTimeout(()=>{
-      hideProcessing();
-      openEditor(null, '', true);
-    }, 1000);
-  };
-  mediaRecorder.start();
-  isRecording = true;
-  startRecordUI();
-}
-
-function stopRecord(){
-  isRecording = false;
-  if(recognition){
-    // Do NOT call stopRecordUI() here.
-    // recognition.onend will fire after .stop() and handle everything.
-    const r = recognition;
-    recognition = null;
-    r.stop();
-  } else if(mediaRecorder && mediaRecorder.state !== 'inactive'){
-    mediaRecorder.stop();
-    stopRecordUI();
-  } else {
-    stopRecordUI();
-  }
-}
-
-function startRecordUI(){
-  recSeconds = 0;
-  document.getElementById('recordBtn').classList.add('recording');
-  document.getElementById('voiceStatus').classList.add('show');
-  document.getElementById('fabLabel').textContent = '錄音中...';
-  document.getElementById('recTimer').classList.add('show');
-  document.getElementById('vsTimer').textContent = '00:00';
-  recInterval = setInterval(() => {
-    recSeconds++;
-    const m = String(Math.floor(recSeconds / 60)).padStart(2, '0');
-    const s = String(recSeconds % 60).padStart(2, '0');
-    const display = m + ':' + s;
-    document.getElementById('recTimer').textContent = display;
-    document.getElementById('vsTimer').textContent = display;
-  }, 1000);
-}
-
-function stopRecordUI(){
-  clearInterval(recInterval);
-  document.getElementById('recordBtn').classList.remove('recording');
-  document.getElementById('voiceStatus').classList.remove('show');
-  document.getElementById('fabLabel').textContent = '按下錄音';
-  document.getElementById('recTimer').classList.remove('show');
-  document.getElementById('vsTimer').textContent = '00:00';
-}
 
 function showProcessing(msg){
   document.getElementById('procText').textContent = msg||'處理中...';
@@ -1349,22 +1066,6 @@ async function classifyWithAI(transcript){
   }
 }
 
-function openEditorWithAI(transcript, ai){
-  // Open editor in new-note mode with transcript as content
-  openEditor(null, transcript, true);
-
-  // Override with AI suggestions
-  document.getElementById('noteTitle').value = ai.title;
-
-  // Select the AI-suggested category
-  selectCat(ai.cat);
-
-  // Set AI-suggested tags
-  currentTags = [...ai.tags];
-  renderTagChips();
-
-  flashToastCustom('✦ AI 已自動分類', '#7c6cfc');
-}
 
 async function manualClassify(){
   const content = document.getElementById('noteContent').value.trim();
