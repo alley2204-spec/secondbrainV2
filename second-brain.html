@@ -92,6 +92,18 @@ body::before {
   text-transform: uppercase;
   margin-top: 0.1rem;
 }
+#syncStatus {
+  display: inline-block;
+  margin-left: 0.3rem;
+  font-size: 0.55rem;
+  text-transform: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#syncStatus.show { opacity: 1; }
+#syncStatus.syncing { color: var(--amber); }
+#syncStatus.done { color: var(--green); }
+#syncStatus.error { color: var(--red); }
 .search-btn {
   background: var(--bg3);
   border: 1px solid var(--border);
@@ -281,7 +293,7 @@ body::before {
 /* ── FAB ── */
 .fab-wrap {
   position: fixed;
-  bottom: 1.8rem;
+  bottom: 5.5rem;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -303,7 +315,14 @@ body::before {
   transition: all 0.2s;
   color: var(--muted);
 }
-.fab-mini:hover { border-color: var(--accent); color: var(--accent2); background: rgba(124,108,252,0.1); }
+.fab-mini.fab-main {
+  width: 56px; height: 56px;
+  font-size: 1.4rem;
+  background: rgba(124,108,252,0.15);
+  border-color: rgba(124,108,252,0.35);
+  color: var(--accent2);
+}
+.fab-mini:hover, .fab-mini.fab-main:hover { border-color: var(--accent); color: var(--accent2); background: rgba(124,108,252,0.2); }
 
 
 /* ══════════════════════════
@@ -437,7 +456,7 @@ body::before {
   border-color: var(--accent);
 }
 .form-select option { background: var(--bg2); }
-.form-textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
+.form-textarea { resize: vertical; min-height: 260px; line-height: 1.7; font-size: 0.95rem; }
 
 /* PARA selector */
 .para-selector {
@@ -595,16 +614,16 @@ body::before {
 .due-badge.urgent{background:rgba(240,96,112,.18);color:var(--red);border:1px solid rgba(240,96,112,.3)}
 .due-badge.soon{background:rgba(240,160,64,.18);color:var(--amber);border:1px solid rgba(240,160,64,.3)}
 .due-badge.ok{background:rgba(82,201,122,.12);color:var(--green);border:1px solid rgba(82,201,122,.25)}
-.notif-panel{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-bottom:1px solid var(--border);z-index:70;padding:.8rem 1.2rem;display:none;animation:slideDown .3s ease both}
+.notif-panel{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-bottom:1px solid var(--border);z-index:70;padding:1.2rem 1.5rem 1rem;display:none;animation:slideDown .3s ease both}
 .notif-panel.show{display:block}
 @keyframes slideDown{from{transform:translateX(-50%) translateY(-100%)}to{transform:translateX(-50%) translateY(0)}}
-.notif-title{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin-bottom:.5rem}
-.notif-close{float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem}
-.notif-item{display:flex;align-items:center;gap:.6rem;padding:.4rem 0;border-bottom:1px solid var(--border);cursor:pointer}
+.notif-title{font-family:'DM Mono',monospace;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin-bottom:.7rem}
+.notif-close{float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem}
+.notif-item{display:flex;align-items:center;gap:.7rem;padding:.55rem 0;border-bottom:1px solid var(--border);cursor:pointer}
 .notif-item:last-child{border-bottom:none}
-.notif-item-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.notif-item-text{flex:1;font-size:.82rem;color:var(--text)}
-.notif-item-days{font-family:'DM Mono',monospace;font-size:.58rem}
+.notif-item-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.notif-item-text{flex:1;font-size:.95rem;color:var(--text)}
+.notif-item-days{font-family:'DM Mono',monospace;font-size:.7rem}
 
 </style>
 </head>
@@ -616,7 +635,7 @@ body::before {
   <div class="header">
     <div class="header-left">
       <h1>Second <span>Brain</span></h1>
-      <div class="header-sub" id="headerSub">⚓ 帆船 · AI · 內容創作</div>
+      <div class="header-sub" id="headerSub">⚓ 航海 · 生活 · AI · 投資 · 內容創作 <span id="syncStatus"></span></div>
     </div>
     <div style="display:flex;gap:.5rem;align-items:center"><button class="search-btn" id="notifBell" onclick="toggleNotifPanel()">🔕</button><button class="search-btn" onclick="toggleSearch()">🔍</button></div>
   </div>
@@ -644,8 +663,7 @@ body::before {
   <!-- FAB -->
   <div class="fab-wrap">
     <div class="fab-row">
-      <button class="fab-mini" onclick="openEditor(null)" title="新增文字筆記">✏️</button>
-      <button class="fab-mini" onclick="exportBackup()" title="備份">⬇</button>
+      <button class="fab-mini fab-main" onclick="openEditor(null)" title="新增文字筆記">✏️</button>
     </div>
   </div>
 
@@ -765,11 +783,13 @@ const IS_LOCAL = (location.hostname === 'localhost' || location.hostname === '12
 const WORKER_BASE = IS_LOCAL ? '' : 'https://second-brain-api.alley2204.workers.dev';
 const API_ENDPOINT = IS_LOCAL ? '/api/classify' : `${WORKER_BASE}/classify`;
 const PENDING_ENDPOINT = `${WORKER_BASE}/pending`;
+const SYNC_ENDPOINT = `${WORKER_BASE}/notes/sync`;
 
 // ══════════════════════════════════════════
 //  STORAGE
 // ══════════════════════════════════════════
 const LS_KEY = 'secondbrain_notes_v2';
+const SYNC_KEY = 'secondbrain_sync_meta';
 
 function loadNotes(){
   try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; }
@@ -779,7 +799,27 @@ function saveNotes(notes){
   try { localStorage.setItem(LS_KEY, JSON.stringify(notes)); } catch(e){}
 }
 
+function loadSyncMeta(){
+  try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || { lastSyncedAt: null, pendingDeletions: [] }; }
+  catch(e){ return { lastSyncedAt: null, pendingDeletions: [] }; }
+}
+function saveSyncMeta(meta){
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify(meta)); } catch(e){}
+}
+
 let notes = loadNotes();
+
+// 遷移：確保所有筆記都有 updatedAt
+(function migrateNotes(){
+  let migrated = false;
+  notes.forEach(n => {
+    if (!n.updatedAt) {
+      n.updatedAt = new Date(n.date || '2025-01-01').toISOString();
+      migrated = true;
+    }
+  });
+  if (migrated) saveNotes(notes);
+})();
 if(notes.length === 0){
   // Seed with user's actual context
   notes = [
@@ -936,7 +976,9 @@ function openEditor(id, prefillContent='', isVoice=false){
 
   document.getElementById('sheetOverlay').classList.add('show');
   document.getElementById('bottomSheet').classList.add('show');
-  setTimeout(()=>{ if(!id) document.getElementById('noteTitle').focus(); }, 400);
+  // 只有新增筆記時才 focus（避免編輯現有筆記時 iPhone 鍵盤自動彈出）
+  // 即使新增也不自動 focus，讓使用者自行點擊想編輯的欄位
+  // setTimeout(()=>{ if(!id) document.getElementById('noteTitle').focus(); }, 400);
 }
 
 function closeSheet(){
@@ -961,11 +1003,11 @@ function saveNote(){
   if(editingId){
     const idx = notes.findIndex(n=>n.id===editingId);
     if(idx !== -1){
-      const _due=currentCatSel==='project'?(document.getElementById('noteDueDate').value||null):null;const _rd=currentCatSel==='project'?[...document.querySelectorAll('.reminder-day-btn.active')].map(b=>+b.dataset.days):[];notes[idx] = { ...notes[idx], title, content, cat:currentCatSel, tags:[...currentTags], date:today(), dueDate:_due, reminderDays:_rd };
+      const _due=currentCatSel==='project'?(document.getElementById('noteDueDate').value||null):null;const _rd=currentCatSel==='project'?[...document.querySelectorAll('.reminder-day-btn.active')].map(b=>+b.dataset.days):[];notes[idx] = { ...notes[idx], title, content, cat:currentCatSel, tags:[...currentTags], date:today(), dueDate:_due, reminderDays:_rd, updatedAt: new Date().toISOString() };
     }
   } else {
     notes.unshift({
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title: title || content.slice(0,30)+'...',
       content, cat: currentCatSel,
       tags: [...currentTags],
@@ -973,6 +1015,7 @@ function saveNote(){
       dueDate: currentCatSel==='project'?(document.getElementById('noteDueDate').value||null):null,
       reminderDays: currentCatSel==='project'?[...document.querySelectorAll('.reminder-day-btn.active')].map(b=>+b.dataset.days):[],
       voice: window._lastNoteWasVoice || false,
+      updatedAt: new Date().toISOString(),
     });
     window._lastNoteWasVoice = false;
   }
@@ -986,6 +1029,12 @@ function saveNote(){
 function deleteNote(){
   if(!editingId) return;
   if(!confirm('確定刪除這則筆記？')) return;
+
+  // 記錄刪除墓碑供同步
+  const syncMeta = loadSyncMeta();
+  syncMeta.pendingDeletions.push({ id: editingId, deletedAt: new Date().toISOString() });
+  saveSyncMeta(syncMeta);
+
   notes = notes.filter(n=>n.id!==editingId);
   saveNotes(notes);
   closeSheet();
@@ -1004,7 +1053,6 @@ function renderTagChips(){
     wrap.appendChild(chip);
   });
   wrap.appendChild(input);
-  input.focus();
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -1122,6 +1170,7 @@ function importBackup(){
 function resetAll(){
   if(!confirm('⚠️ 確定清除所有筆記？此操作無法復原。')) return;
   localStorage.removeItem(LS_KEY);
+  localStorage.removeItem(SYNC_KEY);
   notes = []; saveNotes(notes); location.reload();
 }
 
@@ -1280,7 +1329,7 @@ function pushIncomingNote(data){
   }
 
   const note = {
-    id:      Date.now().toString(),
+    id:      crypto.randomUUID(),
     title:   (data.title   || '語音筆記').trim(),
     cat:     (['project','area','resource','archive'].includes(data.cat) ? data.cat : 'resource'),
     content: (data.content || '').trim(),
@@ -1288,6 +1337,7 @@ function pushIncomingNote(data){
     date:    today(),
     voice:   true,
     reminderDays: [1,3,7],
+    updatedAt: new Date().toISOString(),
   };
 
   // Load fresh from storage first to avoid overwriting parallel changes
@@ -1508,18 +1558,16 @@ window.addEventListener('hashchange', checkIncomingNote);
 
 // ══════════════════════════════════════════
 //  KV Inbox：從 Worker /pending 拉取語音筆記
-//  支援主畫面 PWA 與 Safari 共享筆記
 // ══════════════════════════════════════════
 async function checkPendingNotes(){
-  if(IS_LOCAL) return; // 本機開發不需要
+  if(IS_LOCAL) return;
   try {
     const resp = await fetch(PENDING_ENDPOINT);
     if(!resp.ok) return;
-    const { notes } = await resp.json();
-    if(!Array.isArray(notes) || notes.length === 0) return;
-    for(const note of notes){
+    const { notes: pendingNotes } = await resp.json();
+    if(!Array.isArray(pendingNotes) || pendingNotes.length === 0) return;
+    for(const note of pendingNotes){
       pushIncomingNote(note);
-      // 多筆時錯開一點避免 id 碰撞（id 用 Date.now）
       await new Promise(r => setTimeout(r, 50));
     }
   } catch(e){
@@ -1527,19 +1575,121 @@ async function checkPendingNotes(){
   }
 }
 
-// App 開啟時自動檢查 KV inbox
-setTimeout(checkPendingNotes, 800);
+// ══════════════════════════════════════════
+//  CLOUD SYNC — Cloudflare KV (Delta Sync)
+// ══════════════════════════════════════════
+let _syncInProgress = false;
+let _syncRetryTimer = null;
 
-// 每次回到前台也檢查（從其他 App 切回來時）
+function updateSyncIndicator(state){
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  el.className = 'show ' + state;
+  if(state === 'syncing'){
+    el.textContent = '⟳ 同步中…';
+  } else if(state === 'done'){
+    el.textContent = '✓ 已同步';
+    setTimeout(() => { el.className = ''; }, 3000);
+  } else if(state === 'error'){
+    el.textContent = '⚠ 同步失敗';
+    setTimeout(() => { el.className = ''; }, 5000);
+  }
+}
+
+async function syncToCloud(){
+  if(IS_LOCAL) return;
+  if(_syncInProgress) return;
+  _syncInProgress = true;
+  updateSyncIndicator('syncing');
+
+  try {
+    const syncMeta = loadSyncMeta();
+    const lastSyncedAt = syncMeta.lastSyncedAt;
+
+    // 增量：只上傳 updatedAt > lastSyncedAt 的筆記
+    const changedNotes = lastSyncedAt
+      ? notes.filter(n => (n.updatedAt || '') > lastSyncedAt)
+      : [...notes]; // 首次同步：全部上傳
+
+    // allIds 讓 server 知道 client 擁有哪些筆記
+    const allIds = notes.map(n => n.id);
+
+    const resp = await fetch(SYNC_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notes: changedNotes,
+        deletions: syncMeta.pendingDeletions,
+        allIds,
+        lastSyncedAt,
+      })
+    });
+
+    if(!resp.ok) throw new Error(`Sync failed: ${resp.status}`);
+    const result = await resp.json();
+    if(result.error) throw new Error(result.error);
+
+    let changed = false;
+
+    // 套用 server 的刪除指令
+    if(result.delete && result.delete.length > 0){
+      const delSet = new Set(result.delete);
+      const before = notes.length;
+      notes = notes.filter(n => !delSet.has(n.id));
+      if(notes.length !== before) changed = true;
+    }
+
+    // 套用 server 的更新/新增
+    if(result.upsert && result.upsert.length > 0){
+      for(const sn of result.upsert){
+        const idx = notes.findIndex(n => n.id === sn.id);
+        if(idx !== -1){
+          notes[idx] = sn;
+        } else {
+          notes.push(sn);
+        }
+      }
+      changed = true;
+    }
+
+    if(changed){
+      // 用原始 saveNotes 避免觸發 monkey-patch 的重複同步
+      _origSaveNotes(notes);
+      renderNotes();
+      updateBellBadge();
+    }
+
+    // 更新 sync meta
+    saveSyncMeta({ lastSyncedAt: result.serverTime, pendingDeletions: [] });
+    updateSyncIndicator('done');
+
+  } catch(e){
+    console.warn('Second Brain: syncToCloud failed', e);
+    updateSyncIndicator('error');
+    clearTimeout(_syncRetryTimer);
+    _syncRetryTimer = setTimeout(() => syncToCloud(), 30000);
+  } finally {
+    _syncInProgress = false;
+  }
+}
+
+// ── 觸發時機 ──
+setTimeout(checkPendingNotes, 800);
+setTimeout(syncToCloud, 2000); // pending 先跑，sync 後跑
+
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'visible') {
     setTimeout(checkPendingNotes, 500);
+    setTimeout(syncToCloud, 1500);
   }
 });
 
-// Sync notes to SW whenever notes change (hook into saveNotes)
+window.addEventListener('online', () => {
+  setTimeout(syncToCloud, 1000);
+});
+
+// ── Monkey-patch saveNotes：同步到 SW + 雲端 ──
 const _origSaveNotes = saveNotes;
-// saveNotes is not hoistable here, so we patch after definition
 setTimeout(() => {
   const origFn = window.saveNotes;
   if(origFn) {
@@ -1547,6 +1697,9 @@ setTimeout(() => {
       origFn(n);
       syncNotesToSW();
       updateBellBadge();
+      // Debounced cloud sync
+      clearTimeout(window._cloudSyncDebounce);
+      window._cloudSyncDebounce = setTimeout(() => syncToCloud(), 1500);
     };
   }
 }, 100);
